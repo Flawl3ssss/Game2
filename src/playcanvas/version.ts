@@ -1,0 +1,1 @@
+export const PLAYCANVAS_PROTOTYPE_VERSION = '0.2.0';
