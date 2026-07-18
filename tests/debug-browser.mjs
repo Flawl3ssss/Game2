@@ -1,0 +1,12 @@
+import { chromium } from 'playwright-core';
+const browser = await chromium.launch({executablePath:'/usr/bin/chromium', headless:false, args:['--no-sandbox','--disable-dev-shm-usage','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist','--enable-unsafe-swiftshader']});
+const page = await browser.newPage({viewport:{width:390,height:844}, deviceScaleFactor:1, isMobile:true, hasTouch:true, locale:'ru-RU'});
+const logs=[];
+page.on('console', msg => logs.push(`${msg.type()}: ${msg.text()}`));
+page.on('pageerror', err => logs.push(`pageerror: ${err.stack || err.message}`));
+page.on('requestfailed', req => logs.push(`requestfailed: ${req.url()} ${req.failure()?.errorText}`));
+await page.goto('http://127.0.0.1:4173', {waitUntil:'domcontentloaded'});
+await page.waitForTimeout(3000);
+console.log(logs.join('\n'));
+console.log('loading text:', await page.locator('#loading-text').textContent());
+await browser.close();
