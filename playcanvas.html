@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#9edcff" />
+    <meta name="description" content="Мобильная 3D-игра Снежный Разгон на PlayCanvas" />
+    <title>Снежный Разгон — PlayCanvas</title>
+  </head>
+  <body>
+    <canvas id="playcanvas-app" aria-label="Игровое поле"></canvas>
+
+    <main id="game-ui">
+      <section id="hud" aria-live="polite">
+        <div class="stat-card">
+          <span class="stat-label">Дистанция</span>
+          <strong id="distance-value">0 м</strong>
+        </div>
+        <div class="stat-card stat-card--right">
+          <span class="stat-label">Монеты</span>
+          <strong id="coins-value">0</strong>
+        </div>
+      </section>
+
+      <p id="control-hint">Веди пальцем влево и вправо</p>
+
+      <section id="menu" class="menu-panel">
+        <div class="menu-card">
+          <span class="eyebrow">PLAYCANVAS PROTOTYPE</span>
+          <h1 id="menu-title">Снежный Разгон</h1>
+          <p id="menu-copy">Спускайся по бесконечному склону, собирай монеты и объезжай камни.</p>
+          <button id="start-button" type="button">СТАРТ</button>
+        </div>
+      </section>
+
+      <pre id="fatal-error" role="alert"></pre>
+    </main>
+
+    <script type="module" src="/src/playcanvas/main.ts"></script>
+  </body>
+</html>
