@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#8bd7ff" />
+    <link rel="icon" href="data:," />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Снежный Разгон</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" aria-label="Игровое поле"></canvas>
+
+      <div id="loading" class="screen loading-screen">
+        <div class="logo-mark">❄</div>
+        <h1 id="loading-title">Снежный Разгон</h1>
+        <div class="loading-track"><div id="loading-bar"></div></div>
+        <p id="loading-text">Подготавливаем склон…</p>
+      </div>
+
+      <main id="menu" class="screen hidden">
+        <div class="top-stats">
+          <div class="stat-pill"><span>🪙</span><strong id="menu-coins">0</strong></div>
+          <div class="stat-pill"><span>🏁</span><strong id="menu-best">0 м</strong></div>
+        </div>
+
+        <section class="title-card">
+          <p id="menu-eyebrow" class="eyebrow">БЕСКОНЕЧНЫЙ СПУСК</p>
+          <h1 id="menu-title">Снежный<br />Разгон</h1>
+          <p id="menu-description">Запускай героя, собирай монеты и мчись всё дальше.</p>
+        </section>
+
+        <section class="upgrade-panel" aria-label="Улучшения">
+          <button class="upgrade-card" data-upgrade="launch">
+            <span class="upgrade-icon">🚀</span>
+            <span class="upgrade-copy"><b data-label="launch">Разгон</b><small>Ур. <span data-level="launch">1</span></small></span>
+            <span class="upgrade-cost"><span data-cost="launch">100</span> 🪙</span>
+          </button>
+          <button class="upgrade-card" data-upgrade="sled">
+            <span class="upgrade-icon">🛷</span>
+            <span class="upgrade-copy"><b data-label="sled">Санки</b><small>Ур. <span data-level="sled">1</span></small></span>
+            <span class="upgrade-cost"><span data-cost="sled">120</span> 🪙</span>
+          </button>
+          <button class="upgrade-card" data-upgrade="income">
+            <span class="upgrade-icon">💰</span>
+            <span class="upgrade-copy"><b data-label="income">Доход</b><small>Ур. <span data-level="income">1</span></small></span>
+            <span class="upgrade-cost"><span data-cost="income">90</span> 🪙</span>
+          </button>
+        </section>
+
+        <button id="start-button" class="primary-button">НАЧАТЬ ЗАЕЗД</button>
+        <p id="control-note" class="control-note">Проводи пальцем влево и вправо во время спуска</p>
+      </main>
+
+      <section id="launch-screen" class="screen launch-screen hidden">
+        <div class="launch-copy">
+          <p id="launch-overline">УДЕРЖИВАЙ</p>
+          <h2 id="launch-title">Набери мощность</h2>
+          <p id="launch-hint" class="launch-hint">Отпусти палец, чтобы стартовать</p>
+        </div>
+        <div class="power-shell"><div id="power-fill"></div><div class="perfect-zone"></div></div>
+        <div class="finger-hint">☝</div>
+      </section>
+
+      <section id="hud" class="hud hidden" aria-label="Информация о заезде">
+        <div class="hud-top">
+          <div class="distance"><span id="distance-value">0</span><small id="distance-unit">м</small></div>
+          <button id="pause-button" class="icon-button" aria-label="Пауза">Ⅱ</button>
+        </div>
+        <div class="hud-bottom">
+          <div class="speed-card"><span id="speed-value">0</span><small id="speed-unit">км/ч</small></div>
+          <div class="run-coins">🪙 <strong id="run-coins">0</strong></div>
+        </div>
+        <div id="combo" class="combo hidden">ИДЕАЛЬНО!</div>
+      </section>
+
+      <section id="result" class="screen result-screen hidden">
+        <div class="result-card">
+          <p id="result-eyebrow" class="eyebrow">ЗАЕЗД ЗАВЕРШЁН</p>
+          <h2><span id="result-distance">0</span> <span id="result-distance-unit">м</span></h2>
+          <p id="new-record" class="record hidden">Новый рекорд!</p>
+          <div class="result-row"><span id="collected-label">Собрано</span><strong>🪙 <span id="result-coins">0</span></strong></div>
+          <button id="double-button" class="reward-button">УДВОИТЬ ЗА РЕКЛАМУ</button>
+          <button id="again-button" class="primary-button">ЕЩЁ РАЗ</button>
+          <button id="menu-button" class="text-button">В МЕНЮ</button>
+        </div>
+      </section>
+
+      <section id="pause" class="screen pause-screen hidden">
+        <div class="modal-card">
+          <h2 id="pause-title">Пауза</h2>
+          <button id="resume-button" class="primary-button">ПРОДОЛЖИТЬ</button>
+          <button id="quit-button" class="text-button">ЗАВЕРШИТЬ ЗАЕЗД</button>
+        </div>
+      </section>
+
+      <div id="toast" class="toast hidden" role="status"></div>
+      <div id="debug" class="debug hidden"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
