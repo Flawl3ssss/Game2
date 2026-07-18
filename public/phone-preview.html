@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#91d6ff" />
+  <title>Снежный Разгон — тест на телефоне</title>
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; color: #fff; background: #91d6ff; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; touch-action: none; overscroll-behavior: none; }
+    canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+    #ui { position: fixed; inset: 0; pointer-events: none; padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+    #hud { display: flex; justify-content: space-between; gap: 12px; }
+    .stat { min-width: 104px; padding: 11px 14px; border: 1px solid rgba(255,255,255,.17); border-radius: 18px; background: rgba(4,19,37,.66); box-shadow: 0 12px 34px rgba(0,31,62,.2); backdrop-filter: blur(12px); font-size: 20px; font-weight: 900; }
+    .stat:last-child { text-align: right; }
+    .label { display: block; margin-bottom: 4px; color: rgba(255,255,255,.64); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+    #hint { position: absolute; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); width: min(88vw, 380px); margin: 0; padding: 11px 16px; transform: translateX(-50%); border-radius: 18px; background: rgba(4,19,37,.64); text-align: center; font-size: 13px; font-weight: 700; opacity: 0; transition: opacity .25s; backdrop-filter: blur(12px); }
+    #hint.show { opacity: 1; }
+    #menu { position: fixed; inset: 0; display: grid; place-items: center; padding: 22px; pointer-events: auto; background: linear-gradient(rgba(30,139,207,.12), rgba(3,18,36,.74)); transition: opacity .18s, visibility .18s; }
+    #menu.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    #card { width: min(92vw, 430px); padding: 27px; border: 1px solid rgba(255,255,255,.17); border-radius: 30px; background: rgba(5,22,42,.86); box-shadow: 0 32px 90px rgba(0,0,0,.34); text-align: center; backdrop-filter: blur(16px); }
+    #badge { color: #8edbff; font-size: 10px; font-weight: 900; letter-spacing: .16em; }
+    h1 { margin: 11px 0 12px; font-size: clamp(36px,10vw,54px); line-height: .94; letter-spacing: -.045em; }
+    #copy { margin: 0 0 22px; color: rgba(255,255,255,.74); line-height: 1.48; }
+    button { width: 100%; min-height: 58px; border: 0; border-radius: 19px; background: linear-gradient(#fff,#dff5ff); color: #07213d; font-size: 17px; font-weight: 950; letter-spacing: .04em; }
+    #error { position: fixed; inset: 16px; z-index: 20; display: none; overflow: auto; margin: 0; padding: 18px; border-radius: 20px; pointer-events: auto; background: rgba(73,12,12,.96); color: white; white-space: pre-wrap; }
+    #error.show { display: block; }
+  </style>
+  <script type="importmap">
+    {"imports":{"playcanvas":"https://cdn.jsdelivr.net/npm/playcanvas@2.20.6/build/playcanvas.mjs"}}
+  </script>
+</head>
+<body>
+  <canvas id="app"></canvas>
+  <div id="ui">
+    <div id="hud">
+      <div class="stat"><span class="label">Дистанция</span><span id="distance">0 м</span></div>
+      <div class="stat"><span class="label">Монеты</span><span id="coins">0</span></div>
+    </div>
+    <p id="hint">Веди пальцем влево и вправо</p>
+  </div>
+  <section id="menu">
+    <div id="card">
+      <span id="badge">PLAYCANVAS · PHONE BUILD</span>
+      <h1 id="title">Снежный Разгон</h1>
+      <p id="copy">Собирай монеты, используй ускорители и прыгай с трамплинов.</p>
+      <button id="start">СТАРТ</button>
+    </div>
+  </section>
+  <pre id="error"></pre>
+
+  <script type="module">
+    import * as pc from 'playcanvas';
+
+    const canvas = document.querySelector('#app');
+    const menu = document.querySelector('#menu');
+    const title = document.querySelector('#title');
+    const copy = document.querySelector('#copy');
+    const start = document.querySelector('#start');
+    const distanceEl = document.querySelector('#distance');
+    const coinsEl = document.querySelector('#coins');
+    const hint = document.querySelector('#hint');
+    const errorEl = document.querySelector('#error');
+
+    const fail = (error) => {
+      errorEl.textContent = error?.stack || String(error);
+      errorEl.classList.add('show');
+      console.error(error);
+    };
+    addEventListener('error', event => fail(event.error || event.message));
+    addEventListener('unhandledrejection', event => fail(event.reason));
+
+    try {
+      const app = new pc.Application(canvas);
+      app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+      app.setCanvasResolution(pc.RESOLUTION_AUTO);
+      app.scene.ambientLight = new pc.Color(.72, .79, .9);
+
+      const mat = (color, gloss = .2, metalness = 0, emissive = new pc.Color()) => {
+        const material = new pc.StandardMaterial();
+        material.diffuse = color;
+        material.gloss = gloss;
+        material.metalness = metalness;
+        material.emissive = emissive;
+        material.update();
+        return material;
+      };
+
+      const snow = mat(new pc.Color(.91,.97,1), .16);
+      const red = mat(new pc.Color(.92,.055,.045), .58, .08);
+      const dark = mat(new pc.Color(.035,.075,.12), .42, .22);
+      const gold = mat(new pc.Color(1,.58,.015), .8, .68, new pc.Color(.16,.07,0));
+      const stone = mat(new pc.Color(.29,.34,.41), .13);
+      const ice = mat(new pc.Color(.2,.78,1), .84, .22, new pc.Color(.02,.2,.32));
+      const rampMat = mat(new pc.Color(.18,.49,.78), .34);
+      const trunkMat = mat(new pc.Color(.3,.135,.04), .16);
+      const pineMat = mat(new pc.Color(.025,.25,.14), .15);
+
+      const primitive = (name, type, material, scale, position, parent = app.root) => {
+        const entity = new pc.Entity(name);
+        entity.addComponent('render', { type });
+        entity.render.material = material;
+        entity.render.castShadows = true;
+        entity.render.receiveShadows = true;
+        entity.setLocalScale(scale.x, scale.y, scale.z);
+        entity.setLocalPosition(position.x, position.y, position.z);
+        parent.addChild(entity);
+        return entity;
+      };
+
+      const camera = new pc.Entity('Camera');
+      camera.addComponent('camera', { clearColor: new pc.Color(.43,.76,.96), farClip: 210, fov: 57 });
+      camera.setPosition(0, 6.6, 14.4);
+      camera.lookAt(0, .4, -17);
+      app.root.addChild(camera);
+
+      const sun = new pc.Entity('Sun');
+      sun.addComponent('light', { type: 'directional', color: new pc.Color(1,.965,.9), intensity: 1.5, castShadows: true, shadowDistance: 72, shadowResolution: 1024 });
+      sun.setEulerAngles(42, 32, 0);
+      app.root.addChild(sun);
+
+      const sled = new pc.Entity('Sled');
+      app.root.addChild(sled);
+      primitive('Body','box',red,new pc.Vec3(1.38,.3,2.35),new pc.Vec3(0,.52,0),sled);
+      primitive('Seat','box',dark,new pc.Vec3(.94,.28,.94),new pc.Vec3(0,.82,.2),sled);
+      primitive('RunnerL','box',dark,new pc.Vec3(.13,.13,2.72),new pc.Vec3(-.57,.25,0),sled);
+      primitive('RunnerR','box',dark,new pc.Vec3(.13,.13,2.72),new pc.Vec3(.57,.25,0),sled);
+
+      const CHUNK_LENGTH = 24;
+      const CHUNK_COUNT = 8;
+      const PLAYER_Z = 3.2;
+      const MAX_X = 4.45;
+      const chunks = [];
+
+      const randomFor = seed => {
+        let value = seed >>> 0;
+        return () => ((value = (value * 1664525 + 1013904223) >>> 0) / 4294967296);
+      };
+
+      const item = (entity, kind) => ({ entity, kind, used: false });
+
+      const createTree = (parent, index) => {
+        const tree = new pc.Entity('Pine-' + index);
+        parent.addChild(tree);
+        primitive('Trunk','cylinder',trunkMat,new pc.Vec3(.28,1.45,.28),new pc.Vec3(0,.68,0),tree);
+        primitive('Crown1','cone',pineMat,new pc.Vec3(1.65,2.05,1.65),new pc.Vec3(0,2,0),tree);
+        primitive('Crown2','cone',pineMat,new pc.Vec3(1.12,1.65,1.12),new pc.Vec3(0,3.12,0),tree);
+        tree.enabled = false;
+        return item(tree, 'tree');
+      };
+
+      const createChunk = slot => {
+        const root = new pc.Entity('Chunk-' + slot);
+        app.root.addChild(root);
+        primitive('Snow','box',snow,new pc.Vec3(12.9,.5,CHUNK_LENGTH),new pc.Vec3(0,-.36,0),root);
+        const coins = Array.from({length:8}, (_,i) => {
+          const entity = primitive('Coin-'+i,'cylinder',gold,new pc.Vec3(.48,.12,.48),new pc.Vec3(),root);
+          entity.setLocalEulerAngles(0,0,90); entity.enabled = false; return item(entity,'coin');
+        });
+        const rocks = Array.from({length:2}, (_,i) => {
+          const entity = primitive('Rock-'+i,'sphere',stone,new pc.Vec3(1.16,.88,1.02),new pc.Vec3(),root);
+          entity.enabled = false; return item(entity,'rock');
+        });
+        const boostEntity = primitive('Boost','box',ice,new pc.Vec3(1.7,.08,3.3),new pc.Vec3(),root);
+        boostEntity.enabled = false;
+        const rampEntity = primitive('Ramp','box',rampMat,new pc.Vec3(2.5,.28,2.7),new pc.Vec3(),root);
+        rampEntity.setLocalEulerAngles(-12,0,0); rampEntity.enabled = false;
+        const trees = Array.from({length:6}, (_,i) => createTree(root,i));
+        return { root, coins, rocks, boost:item(boostEntity,'boost'), ramp:item(rampEntity,'ramp'), trees, index:slot };
+      };
+
+      const rebuild = (chunk, absoluteIndex) => {
+        const random = randomFor(absoluteIndex * 7919 + 113);
+        const all = [...chunk.coins, ...chunk.rocks, chunk.boost, chunk.ramp, ...chunk.trees];
+        all.forEach(entry => { entry.entity.enabled = false; entry.used = false; });
+        for (let row=0; row<6; row++) {
+          if (random() < .22) continue;
+          const coin = chunk.coins[row]; coin.entity.enabled = true;
+          coin.entity.setLocalPosition((random()-.5)*7.6,.93,-9.5+row*3.6);
+        }
+        if (absoluteIndex > 0) {
+          const count = absoluteIndex > 6 && random() > .6 ? 2 : 1;
+          for (let i=0; i<count; i++) {
+            const rock = chunk.rocks[i]; rock.entity.enabled = true;
+            rock.entity.setLocalPosition((random()-.5)*7.8,.55,-5+i*7+random()*2.5);
+            rock.entity.setLocalEulerAngles(random()*14,random()*180,random()*14);
+          }
+        }
+        if (absoluteIndex > 1 && random() > .62) {
+          chunk.boost.entity.enabled = true;
+          chunk.boost.entity.setLocalPosition((random()-.5)*6.8,.04,5.5+(random()-.5)*4);
+        }
+        if (absoluteIndex > 2 && random() > .72) {
+          chunk.ramp.entity.enabled = true;
+          chunk.ramp.entity.setLocalPosition((random()-.5)*6.7,.15,-1+(random()-.5)*4);
+        }
+        chunk.trees.forEach((tree,i) => {
+          const side = i%2===0 ? -1 : 1;
+          const row = Math.floor(i/2);
+          tree.entity.enabled = true;
+          tree.entity.setLocalPosition(side*(6.25+random()*2.5),0,-9+row*8+random()*2);
+          const scale=.72+random()*.5; tree.entity.setLocalScale(scale,scale,scale);
+        });
+      };
+
+      for (let i=0; i<CHUNK_COUNT; i++) {
+        const chunk=createChunk(i); chunk.root.setPosition(0,0,-i*CHUNK_LENGTH); rebuild(chunk,i); chunks.push(chunk);
+      }
+
+      const state = { running:false, targetX:0, x:0, y:0, jump:0, distance:0, coins:0, boost:0, next:CHUNK_COUNT };
+      let pointerDown=false;
+      const closeTo = (position, xDistance, zDistance) => Math.abs(position.x-state.x)<xDistance && Math.abs(position.z-PLAYER_Z)<zDistance;
+
+      const reset = () => {
+        Object.assign(state,{running:false,targetX:0,x:0,y:0,jump:0,distance:0,coins:0,boost:0,next:CHUNK_COUNT});
+        chunks.forEach((chunk,i)=>{chunk.root.setPosition(0,0,-i*CHUNK_LENGTH); rebuild(chunk,i);});
+        distanceEl.textContent='0 м'; coinsEl.textContent='0'; sled.setPosition(0,0,PLAYER_Z); sled.setEulerAngles(0,0,0);
+      };
+      const begin = () => {
+        reset(); state.running=true; menu.classList.add('hidden'); hint.classList.add('show');
+        setTimeout(()=>hint.classList.remove('show'),2500);
+      };
+      const finish = () => {
+        state.running=false; title.textContent='Столкновение'; copy.textContent=`Дистанция: ${Math.floor(state.distance)} м · Монеты: ${state.coins}`;
+        start.textContent='ЕЩЁ РАЗ'; menu.classList.remove('hidden');
+      };
+      start.addEventListener('click',begin);
+
+      const setPointer = event => {
+        const rect=canvas.getBoundingClientRect();
+        state.targetX=pc.math.clamp((((event.clientX-rect.left)/rect.width)*2-1)*4.8,-MAX_X,MAX_X);
+      };
+      canvas.addEventListener('pointerdown',event=>{pointerDown=true;canvas.setPointerCapture(event.pointerId);setPointer(event);});
+      canvas.addEventListener('pointermove',event=>{if(pointerDown)setPointer(event);});
+      canvas.addEventListener('pointerup',()=>{pointerDown=false;});
+      canvas.addEventListener('pointercancel',()=>{pointerDown=false;});
+
+      app.on('update', rawDt => {
+        const dt=Math.min(rawDt,.05);
+        if(!state.running){ chunks.forEach(c=>c.coins.forEach(x=>{if(x.entity.enabled)x.entity.rotateLocal(0,80*dt,0);})); return; }
+        state.x += (state.targetX-state.x)*(1-Math.exp(-dt*9.5));
+        if(state.y>0 || state.jump>0){state.jump-=17*dt;state.y+=state.jump*dt;if(state.y<=0){state.y=0;state.jump=0;}}
+        sled.setPosition(state.x,state.y,PLAYER_Z); sled.setEulerAngles(state.y>0?-8-state.jump*.7:0,0,(state.targetX-state.x)*-6.2);
+        state.boost=Math.max(0,state.boost-dt);
+        const speed=11+Math.min(13,state.distance*.0024)+(state.boost>0?6.5:0);
+        state.distance+=speed*dt;
+        let furthest=Infinity; chunks.forEach(c=>furthest=Math.min(furthest,c.root.getPosition().z));
+        chunks.forEach(chunk=>{chunk.root.translateLocal(0,0,speed*dt);if(chunk.root.getPosition().z>CHUNK_LENGTH){chunk.root.setPosition(0,0,furthest-CHUNK_LENGTH);furthest-=CHUNK_LENGTH;rebuild(chunk,state.next++);}});
+        for(const chunk of chunks){
+          for(const coin of chunk.coins){if(!coin.entity.enabled||coin.used)continue;coin.entity.rotateLocal(0,190*dt,0);if(closeTo(coin.entity.getPosition(),.82,1.05)){coin.used=true;coin.entity.enabled=false;coinsEl.textContent=String(++state.coins);}}
+          if(chunk.boost.entity.enabled&&!chunk.boost.used&&closeTo(chunk.boost.entity.getPosition(),1.18,1.65)){chunk.boost.used=true;chunk.boost.entity.enabled=false;state.boost=1.45;}
+          if(chunk.ramp.entity.enabled&&!chunk.ramp.used&&state.y<.18&&closeTo(chunk.ramp.entity.getPosition(),1.2,1.55)){chunk.ramp.used=true;state.jump=7.1;}
+          for(const rock of chunk.rocks){if(rock.entity.enabled&&!rock.used&&state.y<.72&&closeTo(rock.entity.getPosition(),1.02,1.12)){rock.used=true;finish();return;}}
+        }
+        const cameraPosition=camera.getPosition();cameraPosition.x+=(state.x*.18-cameraPosition.x)*(1-Math.exp(-dt*3.4));camera.setPosition(cameraPosition.x,6.6+state.y*.18,14.4);camera.lookAt(state.x*.08,.45+state.y*.12,-17);
+        distanceEl.textContent=Math.floor(state.distance)+' м';
+      });
+
+      addEventListener('resize',()=>app.resizeCanvas());
+      document.addEventListener('visibilitychange',()=>{if(document.hidden)state.running=false;});
+      app.start();
+    } catch(error) { fail(error); }
+  </script>
+</body>
+</html>
